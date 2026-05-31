@@ -1,6 +1,5 @@
 # 🏎️ RaceRoom - Inside the Engineer's World
 
-> IBM SkillsBuild AI Builders Challenge - May 2025  
 
 ---
 
