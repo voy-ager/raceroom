@@ -191,7 +191,7 @@ export default function App() {
         {page === "race" && !summary && !loading && (
           <div className="hero">
             <div className="hero-left">
-              <div className="hero-eyebrow">IBM SKILLSBUILD CHALLENGE 2025</div>
+              <div className="hero-eyebrow">IBM SKILLSBUILD CHALLENGE 2026</div>
               <h1 className="hero-title">EVERY DECISION.<br/>EXPLAINED.</h1>
               <p className="hero-sub">Select a race above to see every pit stop, overtake, and strategy call explained by AI — the way an engineer sees it.</p>
               <div className="hero-actions">
@@ -240,7 +240,7 @@ export default function App() {
         {page === "race" && summary && !loading && (
           <div className="hero">
             <div className="hero-left">
-              <div className="hero-eyebrow">IBM SKILLSBUILD CHALLENGE 2025</div>
+              <div className="hero-eyebrow">IBM SKILLSBUILD CHALLENGE 2026</div>
               <h1 className="hero-title">EVERY DECISION.<br/>EXPLAINED.</h1>
               <p className="hero-sub">Real-time AI intelligence for every moment of the race.</p>
               <div className="hero-actions">
