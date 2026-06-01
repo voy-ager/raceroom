@@ -1,65 +1,71 @@
-import os
+import threading
 from pathlib import Path
 
 PDF_PATH = Path(__file__).parent / "fia_regulations.pdf"
+
 _chunks = None
+_lock = threading.Lock()
+_loaded = False
 
 def load_regulations():
-    global _chunks
-    if _chunks is not None:
+    global _chunks, _loaded
+
+    if _loaded:
         return _chunks
 
-    print("Loading FIA regulations with Docling (text mode)...")
-    try:
-        from docling.document_converter import DocumentConverter
-        from docling.datamodel.pipeline_options import PdfPipelineOptions
-        from docling.document_converter import PdfFormatOption
-        from docling.datamodel.document import InputFormat
+    with _lock:
+        if _loaded:
+            return _chunks
 
-        # Disable OCR — FIA PDF is text-based, not scanned
-        pipeline_options = PdfPipelineOptions()
-        pipeline_options.do_ocr = False
-        pipeline_options.do_table_structure = False
+        print("Loading FIA regulations with Docling (text mode)...")
+        try:
+            from docling.document_converter import DocumentConverter
+            from docling.datamodel.pipeline_options import PdfPipelineOptions
+            from docling.document_converter import PdfFormatOption
+            from docling.datamodel.document import InputFormat
 
-        converter = DocumentConverter(
-            format_options={
-                InputFormat.PDF: PdfFormatOption(
-                    pipeline_options=pipeline_options
-                )
-            }
-        )
+            pipeline_options = PdfPipelineOptions()
+            pipeline_options.do_ocr = False
+            pipeline_options.do_table_structure = False
+            pipeline_options.generate_page_images = False
+            pipeline_options.generate_picture_images = False
 
-        result = converter.convert(str(PDF_PATH))
-        full_text = result.document.export_to_markdown()
+            converter = DocumentConverter(
+                format_options={
+                    InputFormat.PDF: PdfFormatOption(
+                        pipeline_options=pipeline_options
+                    )
+                }
+            )
 
-        paragraphs = [p.strip() for p in full_text.split('\n\n') if len(p.strip()) > 80]
-        _chunks = paragraphs
-        print(f"Docling loaded {len(_chunks)} regulation chunks.")
-        return _chunks
+            result = converter.convert(str(PDF_PATH))
+            full_text = result.document.export_to_markdown()
+            paragraphs = [p.strip() for p in full_text.split('\n\n') if len(p.strip()) > 80]
+            _chunks = paragraphs
+            _loaded = True
+            print(f"Docling loaded {len(_chunks)} regulation chunks.")
+            return _chunks
 
-    except Exception as e:
-        print(f"Docling error: {e}, falling back to pypdf...")
-        return _fallback_pypdf()
-
-
-def _fallback_pypdf():
-    """Fallback: extract text directly with pypdf if Docling fails"""
-    global _chunks
-    try:
-        import pypdf
-        reader = pypdf.PdfReader(str(PDF_PATH))
-        all_text = ""
-        for page in reader.pages:
-            all_text += page.extract_text() + "\n\n"
-
-        paragraphs = [p.strip() for p in all_text.split('\n\n') if len(p.strip()) > 80]
-        _chunks = paragraphs
-        print(f"pypdf fallback loaded {len(_chunks)} regulation chunks.")
-        return _chunks
-    except Exception as e2:
-        print(f"pypdf fallback also failed: {e2}")
-        _chunks = []
-        return _chunks
+        except Exception as e:
+            print(f"Docling failed: {e}, trying pypdf fallback...")
+            try:
+                import pypdf
+                reader = pypdf.PdfReader(str(PDF_PATH))
+                all_text = ""
+                for page in reader.pages:
+                    text = page.extract_text()
+                    if text:
+                        all_text += text + "\n\n"
+                paragraphs = [p.strip() for p in all_text.split('\n\n') if len(p.strip()) > 80]
+                _chunks = paragraphs
+                _loaded = True
+                print(f"pypdf loaded {len(_chunks)} regulation chunks.")
+                return _chunks
+            except Exception as e2:
+                print(f"Both methods failed: {e2}")
+                _chunks = []
+                _loaded = True
+                return _chunks
 
 
 def get_relevant_regulations(topic: str, max_chunks: int = 3) -> str:
@@ -68,13 +74,11 @@ def get_relevant_regulations(topic: str, max_chunks: int = 3) -> str:
         return ""
 
     topic_lower = topic.lower()
-
     keyword_map = {
-        "pit": ["pit stop", "pit lane", "tyre", "tire", "compound", "pit entry", "pit exit"],
+        "pit": ["pit stop", "pit lane", "tyre", "tire", "compound"],
         "overtake": ["overtaking", "defending", "position", "passing"],
-        "safety": ["safety car", "virtual safety car", "yellow flag", "red flag"],
-        "tire": ["tyre", "tire", "compound", "soft", "medium", "hard", "intermediate", "wet"],
-        "fuel": ["fuel", "refuelling", "energy"],
+        "safety": ["safety car", "virtual safety car", "yellow flag"],
+        "tire": ["tyre", "tire", "compound", "soft", "medium", "hard"],
         "strategy": ["strategy", "undercut", "overcut", "stint"],
     }
 
@@ -99,13 +103,13 @@ def get_relevant_regulations(topic: str, max_chunks: int = 3) -> str:
     if not top_chunks:
         return ""
 
-    result = " | ".join(top_chunks[:max_chunks])
+    result = " | ".join(top_chunks)
     return result[:800] if len(result) > 800 else result
 
 
 def get_pit_stop_regulations(tire_age: int, compound: str) -> str:
-    return get_relevant_regulations(f"pit stop tyre {compound} compound change")
+    return get_relevant_regulations(f"pit stop tyre {compound} compound")
 
 
 def get_overtake_regulations() -> str:
-    return get_relevant_regulations("overtaking defending position battle")
+    return get_relevant_regulations("overtaking defending position")

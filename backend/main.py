@@ -2,8 +2,10 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from analyzer import RaceAnalyzer
 import uvicorn
-
 app = FastAPI(title="RaceRoom API", version="1.0.0")
+
+
+
 
 # Allow React frontend to talk to this API
 app.add_middleware(
